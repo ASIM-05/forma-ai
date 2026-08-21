@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { extractFromNarrative } from './services/geminiService';
 
 // Load environment variables
 dotenv.config();
@@ -27,6 +28,23 @@ app.get('/api/health', (req: Request, res: Response) => {
     message: 'Backend Express server is running smoothly.'
   });
 });
+
+// Extraction endpoint
+app.post('/api/extract', async (req: Request, res: Response) => {
+  const { narrative } = req.body;
+  if (!narrative || typeof narrative !== 'string') {
+    return res.status(400).json({ error: 'Request body must contain a "narrative" string.' });
+  }
+
+  try {
+    const extractedData = await extractFromNarrative(narrative);
+    return res.json(extractedData);
+  } catch (error) {
+    console.error('[Forma AI Backend] Route extraction error:', error);
+    return res.status(500).json({ error: 'Internal server error during data extraction.' });
+  }
+});
+
 
 // Start server
 app.listen(PORT, () => {
