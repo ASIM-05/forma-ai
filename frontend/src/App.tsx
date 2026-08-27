@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import LandingPage from './components/LandingPage';
 import './styles/App.css';
 
 // Preset Narratives
@@ -68,6 +69,7 @@ const PRESETS: Preset[] = [
 ];
 
 function App() {
+  const [view, setView] = useState<'landing' | 'simulator'>('landing');
   const [narrative, setNarrative] = useState(PRESETS[0].narrative);
   const [selectedPresetId, setSelectedPresetId] = useState('auto-claim');
   const [isParsing, setIsParsing] = useState(false);
@@ -83,11 +85,6 @@ function App() {
   
   // Conditional question state
   const [revealedQuestion, setRevealedQuestion] = useState<{label: string, value: string} | null>(null);
-
-  // Pre-fill initial preset values
-  useEffect(() => {
-    simulateParse(PRESETS[0]);
-  }, []);
 
   const handleSelectPreset = (preset: Preset) => {
     setSelectedPresetId(preset.id);
@@ -135,13 +132,22 @@ function App() {
     }, 1700);
   };
 
+  // Pre-fill initial preset values
+  useEffect(() => {
+    simulateParse(PRESETS[0]);
+  }, []);
+
+  if (view === 'landing') {
+    return <LandingPage onLaunchSimulator={() => setView('simulator')} />;
+  }
+
   return (
     <div className="app-container">
       <div className="radial-glow" style={{ top: '-10%', left: '10%' }}></div>
       <div className="radial-glow" style={{ bottom: '-10%', right: '10%' }}></div>
 
       <header>
-        <div className="logo-container">
+        <div className="logo-container" onClick={() => setView('landing')} style={{ cursor: 'pointer' }}>
           <div className="logo-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
@@ -150,7 +156,14 @@ function App() {
           <span className="logo-text gradient-text">Forma AI</span>
           <span className="badge">Engine v1.0</span>
         </div>
-        <div className="tech-badges">
+        <div className="tech-badges" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button 
+            onClick={() => setView('landing')} 
+            className="preset-pill" 
+            style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}
+          >
+            ← Back to Home
+          </button>
           <div className="tech-badge">
             <span className="dot-indicator active"></span>
             <span>Client Simulator Active</span>
