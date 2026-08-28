@@ -46,24 +46,64 @@ export default function LandingPage({ onLaunchSimulator }: LandingPageProps) {
     triggerSandboxParse(preset);
   };
 
-  const triggerSandboxParse = (preset: typeof STATIC_PRESETS[0]) => {
+  const triggerSandboxParse = async (preset: typeof STATIC_PRESETS[0]) => {
     setIsSandboxParsing(true);
     setSandboxFields(null);
     setSandboxStep(0);
 
-    setTimeout(() => {
-      setSandboxStep(1);
-    }, 450);
+    try {
+      const response = await fetch('http://localhost:5000/api/extract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ narrative: sandboxNarrative })
+      });
 
-    setTimeout(() => {
-      setSandboxStep(2);
-    }, 900);
+      if (!response.ok) {
+        throw new Error('Backend API extraction failed.');
+      }
 
-    setTimeout(() => {
-      setSandboxStep(3);
-      setSandboxFields(preset.result);
-      setIsSandboxParsing(false);
-    }, 1400);
+      const data = await response.json();
+      const severity = data.urgency === 'High' ? 'High/Urgent' : data.urgency || 'Medium';
+
+      setTimeout(() => {
+        setSandboxStep(1);
+      }, 300);
+
+      setTimeout(() => {
+        setSandboxStep(2);
+      }, 600);
+
+      setTimeout(() => {
+        setSandboxStep(3);
+        setSandboxFields({
+          type: data.incidentType || 'Property Claim',
+          site: data.location || 'Unknown Location',
+          severity: severity,
+          details: data.description || 'No description found.',
+          branchRule: data.revealedQuestion ? `${data.revealedQuestion.label}: ${data.revealedQuestion.value}` : 'No branch active'
+        });
+        setIsSandboxParsing(false);
+      }, 1000);
+
+    } catch (error) {
+      console.error('[Forma AI Sandbox] API request failed, using sandbox fallback:', error);
+      // Fallback sandbox simulation using preset.result if backend connection fails (e.g. offline)
+      setTimeout(() => {
+        setSandboxStep(1);
+      }, 300);
+
+      setTimeout(() => {
+        setSandboxStep(2);
+      }, 600);
+
+      setTimeout(() => {
+        setSandboxStep(3);
+        setSandboxFields(preset.result);
+        setIsSandboxParsing(false);
+      }, 1000);
+    }
   };
 
   // Scroll to section helper

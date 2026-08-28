@@ -89,10 +89,10 @@ function App() {
   const handleSelectPreset = (preset: Preset) => {
     setSelectedPresetId(preset.id);
     setNarrative(preset.narrative);
-    simulateParse(preset);
+    handleExtract(preset.narrative);
   };
 
-  const simulateParse = (preset: Preset) => {
+  const handleExtract = async (text: string) => {
     setIsParsing(true);
     setCurrentStep(0);
     setFields({
@@ -103,38 +103,83 @@ function App() {
     });
     setRevealedQuestion(null);
 
-    // Stage 1: Incident Type (500ms)
-    setTimeout(() => {
-      setFields((f) => ({ ...f, incidentType: preset.fields.incidentType }));
-      setCurrentStep(1);
-    }, 500);
+    try {
+      const response = await fetch('http://localhost:5000/api/extract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ narrative: text })
+      });
 
-    // Stage 2: Location (900ms)
-    setTimeout(() => {
-      setFields((f) => ({ ...f, location: preset.fields.location }));
-      setCurrentStep(2);
-    }, 900);
-
-    // Stage 3: Description (1300ms)
-    setTimeout(() => {
-      setFields((f) => ({ ...f, description: preset.fields.description }));
-      setCurrentStep(3);
-    }, 1300);
-
-    // Stage 4: Urgency & evaluate conditional questions (1700ms)
-    setTimeout(() => {
-      setFields((f) => ({ ...f, urgency: preset.fields.urgency }));
-      setCurrentStep(4);
-      if (preset.revealedQuestion) {
-        setRevealedQuestion(preset.revealedQuestion);
+      if (!response.ok) {
+        throw new Error('Backend API extraction failed.');
       }
-      setIsParsing(false);
-    }, 1700);
+
+      const data = await response.json();
+
+      // Stage 1: Incident Type (300ms)
+      setTimeout(() => {
+        setFields((f) => ({ ...f, incidentType: data.incidentType || 'Unknown' }));
+        setCurrentStep(1);
+      }, 300);
+
+      // Stage 2: Location (600ms)
+      setTimeout(() => {
+        setFields((f) => ({ ...f, location: data.location || 'Unknown' }));
+        setCurrentStep(2);
+      }, 600);
+
+      // Stage 3: Description (900ms)
+      setTimeout(() => {
+        setFields((f) => ({ ...f, description: data.description || 'Unknown' }));
+        setCurrentStep(3);
+      }, 900);
+
+      // Stage 4: Urgency & evaluate conditional questions (1200ms)
+      setTimeout(() => {
+        setFields((f) => ({ ...f, urgency: data.urgency || 'Low' }));
+        setCurrentStep(4);
+        if (data.revealedQuestion && data.revealedQuestion.label) {
+          setRevealedQuestion(data.revealedQuestion);
+        }
+        setIsParsing(false);
+      }, 1200);
+
+    } catch (error) {
+      console.error('[Forma AI Client] API request failed, using demo fallback:', error);
+      // Staggered fallback to demo data if backend connection fails (e.g. offline)
+      const cachedPreset = PRESETS.find(p => p.narrative === text) || PRESETS[0];
+      
+      setTimeout(() => {
+        setFields((f) => ({ ...f, incidentType: cachedPreset.fields.incidentType }));
+        setCurrentStep(1);
+      }, 300);
+
+      setTimeout(() => {
+        setFields((f) => ({ ...f, location: cachedPreset.fields.location }));
+        setCurrentStep(2);
+      }, 600);
+
+      setTimeout(() => {
+        setFields((f) => ({ ...f, description: cachedPreset.fields.description }));
+        setCurrentStep(3);
+      }, 900);
+
+      setTimeout(() => {
+        setFields((f) => ({ ...f, urgency: cachedPreset.fields.urgency }));
+        setCurrentStep(4);
+        if (cachedPreset.revealedQuestion) {
+          setRevealedQuestion(cachedPreset.revealedQuestion);
+        }
+        setIsParsing(false);
+      }, 1200);
+    }
   };
 
   // Pre-fill initial preset values
   useEffect(() => {
-    simulateParse(PRESETS[0]);
+    handleExtract(PRESETS[0].narrative);
   }, []);
 
   if (view === 'landing') {
@@ -218,8 +263,7 @@ function App() {
               <button
                 className="btn btn-primary"
                 onClick={() => {
-                  const p = PRESETS.find(x => x.id === selectedPresetId) || PRESETS[0];
-                  simulateParse(p);
+                  handleExtract(narrative);
                 }}
                 disabled={isParsing}
               >
