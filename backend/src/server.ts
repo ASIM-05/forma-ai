@@ -15,6 +15,9 @@ const PORT = process.env.PORT || 5000;
 // Connect to MongoDB
 connectDB();
 
+// Define global in-memory database fallback cache
+const dbFallbackCache: any[] = [];
+
 // Enable CORS
 app.use(cors());
 
@@ -69,10 +72,40 @@ app.post('/api/extract', async (req: Request, res: Response) => {
       });
     }
 
+    // Prepend to fallback cache (keep last 50)
+    dbFallbackCache.unshift({
+      _id: new mongoose.Types.ObjectId().toString(),
+      originalNarrative: narrative,
+      incidentType: extractedData.incidentType,
+      location: extractedData.location,
+      description: extractedData.description,
+      urgency: extractedData.urgency,
+      revealedQuestion: extractedData.revealedQuestion,
+      createdAt: new Date().toISOString()
+    });
+    if (dbFallbackCache.length > 50) {
+      dbFallbackCache.pop();
+    }
+
     return res.json(extractedData);
   } catch (error) {
     console.error('[Forma AI Backend] Route extraction error:', error);
     return res.status(500).json({ error: 'Internal server error during data extraction.' });
+  }
+});
+
+// History retrieval endpoint
+app.get('/api/extractions', async (req: Request, res: Response) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const records = await Extraction.find().sort({ createdAt: -1 }).limit(50);
+      return res.json(records);
+    } else {
+      return res.json(dbFallbackCache);
+    }
+  } catch (error) {
+    console.error('[Forma AI Backend] Error fetching extractions:', error);
+    return res.status(500).json({ error: 'Failed to retrieve extractions history.' });
   }
 });
 
