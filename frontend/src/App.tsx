@@ -112,6 +112,24 @@ function App() {
     }
   }, [view]);
 
+  // Gemini health status
+  const [geminiActive, setGeminiActive] = useState(false);
+
+  useEffect(() => {
+    const checkGeminiStatus = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/health');
+        if (response.ok) {
+          const data = await response.json();
+          setGeminiActive(!!data.geminiActive);
+        }
+      } catch (error) {
+        console.error('[Forma AI Client] Error checking Gemini server status:', error);
+      }
+    };
+    checkGeminiStatus();
+  }, []);
+
   const handleSelectPreset = (preset: Preset) => {
     setSelectedPresetId(preset.id);
     setNarrative(preset.narrative);
@@ -249,9 +267,15 @@ function App() {
             {view === 'history' ? '⚡ Active Simulator' : '📓 Extraction History'}
           </button>
 
-          <div className="tech-badge">
-            <span className="dot-indicator active"></span>
-            <span>{view === 'history' ? 'History Archive' : 'Client Simulator Active'}</span>
+          <div className="tech-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ 
+              width: '6px', 
+              height: '6px', 
+              borderRadius: '50%', 
+              background: geminiActive ? '#10b981' : '#f59e0b',
+              boxShadow: geminiActive ? '0 0 6px #10b981' : '0 0 6px #f59e0b'
+            }}></span>
+            <span>{geminiActive ? 'Gemini AI Engine: Active' : 'Gemini AI: Simulated'}</span>
           </div>
         </div>
       </header>

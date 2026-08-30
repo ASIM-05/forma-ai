@@ -34,11 +34,10 @@ app.get('/api/health', (req: Request, res: Response) => {
     status: 'ok',
     uptime: `${uptime}s`,
     timestamp: new Date().toISOString(),
+    geminiActive: !!process.env.GEMINI_API_KEY,
     message: 'Backend Express server is running smoothly.'
   });
-});
-
-// Extraction endpoint
+});// Extraction endpoint
 app.post('/api/extract', async (req: Request, res: Response) => {
   const { narrative } = req.body;
   if (!narrative || typeof narrative !== 'string') {
