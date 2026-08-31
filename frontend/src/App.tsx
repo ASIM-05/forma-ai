@@ -130,6 +130,45 @@ function App() {
     checkGeminiStatus();
   }, []);
 
+  // Manual schema ingestion state
+  const [isIngesting, setIsIngesting] = useState(false);
+  const [ingestSuccess, setIngestSuccess] = useState(false);
+
+  const handleManualIngest = async () => {
+    setIsIngesting(true);
+    setIngestSuccess(false);
+    try {
+      const response = await fetch('http://localhost:5000/api/extractions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          originalNarrative: narrative,
+          incidentType: fields.incidentType,
+          location: fields.location,
+          description: fields.description,
+          urgency: fields.urgency,
+          revealedQuestion
+        })
+      });
+
+      if (response.ok) {
+        setIngestSuccess(true);
+        // Refresh history
+        await fetchHistory();
+        // Hide success message after 4s
+        setTimeout(() => setIngestSuccess(false), 4000);
+      } else {
+        console.error('[Forma AI Client] Failed to ingest claims manually.');
+      }
+    } catch (e) {
+      console.error('[Forma AI Client] Error during manual schema ingestion:', e);
+    } finally {
+      setIsIngesting(false);
+    }
+  };
+
   const handleSelectPreset = (preset: Preset) => {
     setSelectedPresetId(preset.id);
     setNarrative(preset.narrative);
@@ -139,6 +178,7 @@ function App() {
   const handleExtract = async (text: string) => {
     setIsParsing(true);
     setCurrentStep(0);
+    setIngestSuccess(false);
     setFields({
       incidentType: '',
       location: '',
@@ -362,8 +402,9 @@ function App() {
                   type="text"
                   className={`form-input ${fields.incidentType ? 'filled' : ''} ${isParsing && currentStep === 0 ? 'active-fill' : ''}`}
                   value={fields.incidentType}
+                  onChange={(e) => setFields({ ...fields, incidentType: e.target.value })}
                   placeholder="Extracting event..."
-                  disabled
+                  disabled={isParsing || currentStep === 0}
                 />
               </div>
 
@@ -377,8 +418,9 @@ function App() {
                   type="text"
                   className={`form-input ${fields.location ? 'filled' : ''} ${isParsing && currentStep === 1 ? 'active-fill' : ''}`}
                   value={fields.location}
+                  onChange={(e) => setFields({ ...fields, location: e.target.value })}
                   placeholder="Extracting location..."
-                  disabled
+                  disabled={isParsing || currentStep < 2}
                 />
               </div>
 
@@ -391,9 +433,10 @@ function App() {
                 <textarea
                   className={`form-input ${fields.description ? 'filled' : ''} ${isParsing && currentStep === 2 ? 'active-fill' : ''}`}
                   value={fields.description}
+                  onChange={(e) => setFields({ ...fields, description: e.target.value })}
                   placeholder="Synthesizing incident logs..."
                   rows={2}
-                  disabled
+                  disabled={isParsing || currentStep < 3}
                 />
               </div>
 
@@ -403,13 +446,18 @@ function App() {
                   Urgency Flag
                   <span className={`form-field-info ${currentStep >= 4 ? 'show' : ''}`}>AI Extracted</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   className={`form-input ${fields.urgency ? 'filled' : ''} ${isParsing && currentStep === 3 ? 'active-fill' : ''}`}
                   value={fields.urgency}
-                  placeholder="Assessing priority..."
-                  disabled
-                />
+                  onChange={(e) => setFields({ ...fields, urgency: e.target.value })}
+                  disabled={isParsing || currentStep < 4}
+                  style={{ background: 'rgba(255,255,255,0.03)', color: 'white', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <option value="" disabled style={{ background: '#1e293b' }}>Assessing priority...</option>
+                  <option value="Low" style={{ background: '#1e293b' }}>Low</option>
+                  <option value="Medium" style={{ background: '#1e293b' }}>Medium</option>
+                  <option value="High" style={{ background: '#1e293b' }}>High</option>
+                </select>
               </div>
 
               {/* Conditional Branching Fields */}
@@ -424,8 +472,30 @@ function App() {
                     className="form-input filled"
                     style={{ borderColor: 'rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.02)' }}
                     value={revealedQuestion.value}
-                    disabled
+                    onChange={(e) => setRevealedQuestion(prev => prev ? { ...prev, value: e.target.value } : null)}
+                    disabled={isParsing || currentStep < 4}
                   />
+                </div>
+              )}
+
+              {/* Conditional Ingest Button */}
+              {currentStep >= 4 && !isParsing && (
+                <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ width: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: '1px solid #10b981' }}
+                    onClick={handleManualIngest}
+                    disabled={isIngesting}
+                  >
+                    {isIngesting ? 'Ingesting Record...' : '✅ Confirm & Ingest Claim'}
+                  </button>
+                  {ingestSuccess && (
+                    <span style={{ fontSize: '0.82rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', fontWeight: 'bold' }}>
+                      <span className="dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></span>
+                      Claim ingested into database cache successfully!
+                    </span>
+                  )}
                 </div>
               )}
             </form>

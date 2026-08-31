@@ -109,6 +109,53 @@ app.get('/api/extractions', async (req: Request, res: Response) => {
 });
 
 
+// Custom manual ingestion endpoint
+app.post('/api/extractions', async (req: Request, res: Response) => {
+  const { originalNarrative, incidentType, location, description, urgency, revealedQuestion } = req.body;
+  try {
+    let savedRecord;
+    
+    // Save to Database if connected
+    if (mongoose.connection.readyState === 1) {
+      const record = new Extraction({
+        originalNarrative: originalNarrative || 'Manually entered/edited claim',
+        incidentType,
+        location,
+        description,
+        urgency,
+        revealedQuestion
+      });
+      savedRecord = await record.save();
+      console.log('[Forma AI DB] Custom extraction saved to MongoDB successfully.');
+    } else {
+      console.log('[Forma AI DB] Database offline. Simulating custom extraction save...');
+    }
+
+    const clientRecord = {
+      _id: savedRecord ? savedRecord._id.toString() : new mongoose.Types.ObjectId().toString(),
+      originalNarrative: originalNarrative || 'Manually entered/edited claim',
+      incidentType,
+      location,
+      description,
+      urgency,
+      revealedQuestion,
+      createdAt: new Date().toISOString()
+    };
+
+    // Prepend to fallback cache
+    dbFallbackCache.unshift(clientRecord);
+    if (dbFallbackCache.length > 50) {
+      dbFallbackCache.pop();
+    }
+
+    return res.status(201).json(clientRecord);
+  } catch (error) {
+    console.error('[Forma AI Backend] Error saving custom extraction:', error);
+    return res.status(500).json({ error: 'Failed to save custom extraction.' });
+  }
+});
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`[Forma AI Backend] Server is running on http://localhost:${PORT}`);
