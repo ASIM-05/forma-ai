@@ -106,6 +106,51 @@ app.get('/api/extractions', async (req: Request, res: Response) => {
     console.error('[Forma AI Backend] Error fetching extractions:', error);
     return res.status(500).json({ error: 'Failed to retrieve extractions history.' });
   }
+});// Analytics metrics summary endpoint
+app.get('/api/analytics', async (req: Request, res: Response) => {
+  try {
+    let records: any[] = [];
+    if (mongoose.connection.readyState === 1) {
+      records = await Extraction.find();
+    } else {
+      records = dbFallbackCache;
+    }
+
+    const totalExtractions = records.length;
+    const urgencyCounts = { High: 0, Medium: 0, Low: 0 };
+    const categoryCounts: Record<string, number> = {};
+
+    records.forEach((rec) => {
+      // Count urgency
+      if (rec.urgency === 'High') urgencyCounts.High++;
+      else if (rec.urgency === 'Medium') urgencyCounts.Medium++;
+      else urgencyCounts.Low++;
+
+      // Count categories
+      const cat = rec.incidentType || 'Uncategorized';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+
+    // Find top category
+    let topCategory = 'None';
+    let maxCatCount = 0;
+    Object.entries(categoryCounts).forEach(([cat, count]) => {
+      if (count > maxCatCount) {
+        maxCatCount = count;
+        topCategory = cat;
+      }
+    });
+
+    return res.json({
+      totalExtractions,
+      urgencyCounts,
+      categoryCounts,
+      topCategory
+    });
+  } catch (error) {
+    console.error('[Forma AI Backend] Error computing analytics:', error);
+    return res.status(500).json({ error: 'Failed to retrieve analytics summary.' });
+  }
 });
 
 

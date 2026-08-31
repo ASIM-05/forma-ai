@@ -106,9 +106,30 @@ function App() {
     }
   };
 
+  // Analytics state
+  const [analytics, setAnalytics] = useState<{
+    totalExtractions: number;
+    urgencyCounts: { High: number; Medium: number; Low: number };
+    categoryCounts: Record<string, number>;
+    topCategory: string;
+  } | null>(null);
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/analytics');
+      if (response.ok) {
+        const data = await response.json();
+        setAnalytics(data);
+      }
+    } catch (e) {
+      console.error('[Forma AI Client] Error fetching analytics:', e);
+    }
+  };
+
   useEffect(() => {
     if (view === 'history') {
       fetchHistory();
+      fetchAnalytics();
     }
   }, [view]);
 
@@ -129,6 +150,41 @@ function App() {
     };
     checkGeminiStatus();
   }, []);
+
+  // CSV and JSON export helpers
+  const exportToCSV = () => {
+    if (history.length === 0) return;
+    const headers = ['ID', 'Incident Type', 'Location', 'Description', 'Urgency', 'Revealed Question Label', 'Revealed Question Value', 'Created At'];
+    const rows = history.map(row => [
+      `"${row._id || ''}"`,
+      `"${(row.incidentType || '').replace(/"/g, '""')}"`,
+      `"${(row.location || '').replace(/"/g, '""')}"`,
+      `"${(row.description || '').replace(/"/g, '""')}"`,
+      `"${(row.urgency || '').replace(/"/g, '""')}"`,
+      `"${(row.revealedQuestion?.label || '').replace(/"/g, '""')}"`,
+      `"${(row.revealedQuestion?.value || '').replace(/"/g, '""')}"`,
+      `"${row.createdAt || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `forma_ai_extractions_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToJSON = () => {
+    if (history.length === 0) return;
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(history, null, 2));
+    const link = document.createElement('a');
+    link.setAttribute('href', dataStr);
+    link.setAttribute('download', `forma_ai_extractions_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Manual schema ingestion state
   const [isIngesting, setIsIngesting] = useState(false);
@@ -155,8 +211,9 @@ function App() {
 
       if (response.ok) {
         setIngestSuccess(true);
-        // Refresh history
+        // Refresh history and analytics
         await fetchHistory();
+        await fetchAnalytics();
         // Hide success message after 4s
         setTimeout(() => setIngestSuccess(false), 4000);
       } else {
@@ -504,21 +561,78 @@ function App() {
       ) : (
         <main className="main-content-history" style={{ width: '100%', maxWidth: '1200px', zIndex: 2, padding: '1rem 0' }}>
           <section className="glass-card history-container animate-fade-in" style={{ width: '100%', minHeight: '520px', padding: '2rem' }}>
-            <div className="preview-header" style={{ marginBottom: '2rem', justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}>
+            <div className="preview-header" style={{ marginBottom: '1.5rem', justifyContent: 'space-between', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <span className="section-title">Ingested Claims Database</span>
-                <p className="hero-description" style={{ fontSize: '0.9rem', margin: '0.5rem 0 0 0' }}>
+                <p className="hero-description" style={{ fontSize: '0.9rem', margin: '0.4rem 0 0 0' }}>
                   Real-time database of parsed unstructured text narratives and synthesized JSON form schemas.
                 </p>
               </div>
-              <button 
-                onClick={fetchHistory} 
-                className="btn btn-secondary" 
-                style={{ padding: '0.5rem 1rem' }}
-                disabled={isLoadingHistory}
-              >
-                {isLoadingHistory ? 'Refreshing...' : '🔄 Sync Database'}
-              </button>
+              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={exportToCSV}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem' }}
+                  disabled={history.length === 0}
+                  title="Download Claims as CSV Spreadsheet"
+                >
+                  📥 Export CSV
+                </button>
+                <button
+                  onClick={exportToJSON}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem' }}
+                  disabled={history.length === 0}
+                  title="Download Raw Claims as JSON"
+                >
+                  📄 Export JSON
+                </button>
+                <button 
+                  onClick={() => { fetchHistory(); fetchAnalytics(); }} 
+                  className="btn btn-primary" 
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                  disabled={isLoadingHistory}
+                >
+                  {isLoadingHistory ? 'Refreshing...' : '🔄 Sync Database'}
+                </button>
+              </div>
+            </div>
+
+            {/* KPI Analytics Summary Banner */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                  📊
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Ingested Claims</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginTop: '0.2rem' }}>{analytics?.totalExtractions || history.length}</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                  🚨
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>High Urgency Alerts</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ef4444', marginTop: '0.2rem' }}>
+                    {analytics ? analytics.urgencyCounts.High : history.filter(h => h.urgency === 'High').length}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                  🏷️
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top Claim Category</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#10b981', marginTop: '0.2rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                    {analytics?.topCategory || 'Auto Accident'}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {isLoadingHistory ? (
