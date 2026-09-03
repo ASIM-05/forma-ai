@@ -52,9 +52,54 @@ const PRESETS: Preset[] = [
     }
   },
   {
+    id: 'water-leak',
+    label: '🌊 Commercial Water Leak',
+    narrative: 'A heavy water pipe burst on the 3rd floor of our commercial office building in Chicago, causing water to cascade down into the 2nd floor server room.',
+    fields: {
+      incidentType: 'Water Damage',
+      location: 'Commercial Office Tower, Chicago',
+      description: 'Pipe burst on 3rd floor leaking water into 2nd floor server room.',
+      urgency: 'High'
+    },
+    revealedQuestion: {
+      label: 'Has water source been stopped and isolated?',
+      value: 'Yes (Main shutoff valve closed)'
+    }
+  },
+  {
+    id: 'storefront-burglary',
+    label: '🔒 Storefront Burglary',
+    narrative: 'Our storefront glass window in downtown Boston was smashed over the weekend. Laptops, camera gear, and retail inventory were stolen. Police report #4920 filed.',
+    fields: {
+      incidentType: 'Theft/Burglary',
+      location: 'Downtown Storefront, Boston',
+      description: 'Smashed glass window entry. Stolen electronics and retail inventory.',
+      urgency: 'Medium'
+    },
+    revealedQuestion: {
+      label: 'Was a police report filed and documented?',
+      value: 'Yes (Report #4920)'
+    }
+  },
+  {
+    id: 'slip-fall-injury',
+    label: '⚠️ Liability / Slip & Fall',
+    narrative: 'A customer slipped on an uncleaned liquid spill in Aisle 4 of our grocery store and injured their knee. No warning sign was posted.',
+    fields: {
+      incidentType: 'Liability/Injury',
+      location: 'Aisle 4, Grocery Store',
+      description: 'Customer slipped on wet liquid spill causing knee injury.',
+      urgency: 'High'
+    },
+    revealedQuestion: {
+      label: 'Did the incident occur on public property?',
+      value: 'No (Private retail premises)'
+    }
+  },
+  {
     id: 'health-intake',
     label: '⚕️ Medical Intake',
-    narrative: 'I need to schedule a consultation. I have been suffering from acute lower back pain for the past three weeks. It becomes severe when I sit down. No history of major surgeries.',
+    narrative: 'I need to schedule a consultation. I have been suffering from acute lower back pain for the past three weeks. It becomes severe when I sit down.',
     fields: {
       incidentType: 'Clinical consultation',
       location: 'Outpatient clinic',
@@ -189,6 +234,25 @@ function App() {
   // Manual schema ingestion state
   const [isIngesting, setIsIngesting] = useState(false);
   const [ingestSuccess, setIngestSuccess] = useState(false);
+
+  // Search & Filtering State for Ingested Claims
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+
+  const filteredHistory = history.filter((item) => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      q === '' ||
+      (item.incidentType && item.incidentType.toLowerCase().includes(q)) ||
+      (item.location && item.location.toLowerCase().includes(q)) ||
+      (item.description && item.description.toLowerCase().includes(q)) ||
+      (item.originalNarrative && item.originalNarrative.toLowerCase().includes(q));
+
+    const matchesCategory =
+      categoryFilter === 'All' || item.incidentType === categoryFilter;
+
+    return matchesSearch && matchesCategory;
+  });
 
   const handleManualIngest = async () => {
     setIsIngesting(true);
@@ -599,7 +663,7 @@ function App() {
             </div>
 
             {/* KPI Analytics Summary Banner */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
                   📊
@@ -635,6 +699,38 @@ function App() {
               </div>
             </div>
 
+            {/* Real-Time Search & Category Filter Toolbar */}
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 280px', position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search claims by keyword, location, or description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-input"
+                  style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.65rem 1rem', fontSize: '0.9rem', width: '100%' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Category:</span>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="form-input"
+                  style={{ background: '#1e293b', color: 'white', padding: '0.65rem 1rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  <option value="All">All Categories</option>
+                  <option value="Auto Accident">Auto Accident</option>
+                  <option value="Fire/Smoke Damage">Fire/Smoke Damage</option>
+                  <option value="Water Damage">Water Damage</option>
+                  <option value="Theft/Burglary">Theft/Burglary</option>
+                  <option value="Liability/Injury">Liability/Injury</option>
+                  <option value="Clinical consultation">Clinical consultation</option>
+                </select>
+              </div>
+            </div>
+
             {isLoadingHistory ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', gap: '1rem' }}>
                 <span className="spinner"></span>
@@ -654,6 +750,18 @@ function App() {
                   Run First Extraction
                 </button>
               </div>
+            ) : filteredHistory.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '240px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>
+                <span style={{ fontSize: '1.5rem' }}>🔍</span>
+                <span style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.95rem' }}>No claims matched your search or category filter.</span>
+                <button
+                  onClick={() => { setSearchQuery(''); setCategoryFilter('All'); }}
+                  className="btn btn-secondary"
+                  style={{ marginTop: '0.8rem', padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}
+                >
+                  Clear Filters
+                </button>
+              </div>
             ) : (
               <div className="history-table-wrapper" style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -662,13 +770,13 @@ function App() {
                       <th style={{ padding: '1rem' }}>Category</th>
                       <th style={{ padding: '1rem' }}>Extracted Location</th>
                       <th style={{ padding: '1rem' }}>Urgency</th>
-                      <th style={{ padding: '1rem' }}>Narrative Summary</th>
-                      <th style={{ padding: '1rem' }}>Date Ingested</th>
-                      <th style={{ padding: '1rem', width: '80px', textAlign: 'right' }}>Actions</th>
+                      <th style={{ padding: '1rem' }}>Branch Rule Question</th>
+                      <th style={{ padding: '1rem' }}>Date</th>
+                      <th style={{ padding: '1rem' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {history.map((item) => {
+                    {filteredHistory.map((item) => {
                       const isExpanded = expandedHistoryId === item._id;
                       const formattedDate = new Date(item.createdAt).toLocaleString(undefined, {
                         month: 'short',
