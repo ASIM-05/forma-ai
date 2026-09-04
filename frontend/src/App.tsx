@@ -238,6 +238,7 @@ function App() {
   // Search & Filtering State for Ingested Claims
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [highUrgencyOnly, setHighUrgencyOnly] = useState(false);
 
   const filteredHistory = history.filter((item) => {
     const q = searchQuery.toLowerCase().trim();
@@ -251,7 +252,9 @@ function App() {
     const matchesCategory =
       categoryFilter === 'All' || item.incidentType === categoryFilter;
 
-    return matchesSearch && matchesCategory;
+    const matchesUrgency = !highUrgencyOnly || item.urgency === 'High';
+
+    return matchesSearch && matchesCategory && matchesUrgency;
   });
 
   const handleManualIngest = async () => {
@@ -699,6 +702,44 @@ function App() {
               </div>
             </div>
 
+            {/* Visual Urgency Distribution Bar Card */}
+            {history.length > 0 && (
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Urgency Level Distribution</span>
+                  <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                    High: {history.filter(h => h.urgency === 'High').length} | Medium: {history.filter(h => h.urgency === 'Medium').length} | Low: {history.filter(h => h.urgency === 'Low').length}
+                  </span>
+                </div>
+                <div style={{ height: '10px', borderRadius: '5px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden', display: 'flex' }}>
+                  <div
+                    style={{
+                      width: `${(history.filter(h => h.urgency === 'High').length / (history.length || 1)) * 100}%`,
+                      background: '#ef4444',
+                      transition: 'width 0.4s ease'
+                    }}
+                    title="High Urgency"
+                  />
+                  <div
+                    style={{
+                      width: `${(history.filter(h => h.urgency === 'Medium').length / (history.length || 1)) * 100}%`,
+                      background: '#f59e0b',
+                      transition: 'width 0.4s ease'
+                    }}
+                    title="Medium Urgency"
+                  />
+                  <div
+                    style={{
+                      width: `${(history.filter(h => h.urgency === 'Low').length / (history.length || 1)) * 100}%`,
+                      background: '#10b981',
+                      transition: 'width 0.4s ease'
+                    }}
+                    title="Low Urgency"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Real-Time Search & Category Filter Toolbar */}
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ flex: '1 1 280px', position: 'relative' }}>
@@ -729,6 +770,25 @@ function App() {
                   <option value="Clinical consultation">Clinical consultation</option>
                 </select>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setHighUrgencyOnly(!highUrgencyOnly)}
+                className="btn"
+                style={{
+                  background: highUrgencyOnly ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                  border: highUrgencyOnly ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
+                  color: highUrgencyOnly ? '#ef4444' : 'var(--text-secondary)',
+                  padding: '0.65rem 0.9rem',
+                  fontSize: '0.85rem',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: highUrgencyOnly ? 'bold' : 'normal',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                🚨 High Urgency Only {highUrgencyOnly ? '✓' : ''}
+              </button>
             </div>
 
             {isLoadingHistory ? (
