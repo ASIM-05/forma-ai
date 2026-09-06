@@ -9,9 +9,11 @@
 - 🤖 **Real-Time Gemini AI Engine**: Parses raw unstructured text narratives into structured form fields (`incidentType`, `location`, `description`, `urgency`).
 - ⚡ **Dynamic Rule Branching**: Evaluates incoming narrative keywords to trigger secondary, context-aware intake questions (e.g. Auto Accidents trigger drivability checks; Fire incidents trigger housing assistance rules).
 - 💾 **Dual-Layer Resilience**: Automatically persists claims to MongoDB when online, and seamlessly degrades to an in-memory fallback cache when offline without interrupting UX.
-- 📊 **Analytics KPI Dashboard**: Live aggregated statistics reporting total ingested claims, high-urgency alert counts, and top incident category metrics.
+- 📊 **Analytics KPI Dashboard & Urgency Bar Charts**: Live aggregated statistics reporting total ingested claims, high-urgency alert counts, top incident categories, and visual proportional urgency distribution bar charts.
+- 🔍 **Real-Time Search & Category Filtering**: Instant fuzzy text search across narratives, locations, and descriptions, paired with category dropdown filters and a **"🚨 High Urgency Only"** quick toggle.
 - 📥 **CSV & JSON Data Exports**: Instant client-side generation and downloading of claims datasets in spreadsheet `.csv` and raw `.json` formats.
 - ✍️ **Editable Schema Overrides**: Allows users to manually review, edit AI-extracted values, and confirm schema ingestion into the database.
+- ☁️ **Cloud Deployment Ready**: Includes production `render.yaml` infrastructure blueprint, `vercel.json` SPA configuration, and multi-stage `Dockerfiles`.
 
 ---
 
@@ -66,26 +68,6 @@ Forma AI dynamically activates contextual intake fields based on incident catego
 ### 1. `POST /api/extract`
 Parses unstructured text narrative into a structured form schema.
 
-* **Request Body**:
-  ```json
-  {
-    "narrative": "A customer slipped on a wet floor in our retail aisle in the grocery store"
-  }
-  ```
-* **Response**:
-  ```json
-  {
-    "incidentType": "Liability/Injury",
-    "location": "Retail aisle",
-    "description": "Physical slip, fall, or injury occurring at commercial or public premises.",
-    "urgency": "High",
-    "revealedQuestion": {
-      "label": "Did the incident occur on public property?",
-      "value": "No"
-    }
-  }
-  ```
-
 ### 2. `GET /api/extractions`
 Retrieves history of processed and ingested claim extractions.
 
@@ -108,7 +90,27 @@ Returns backend health status and active Gemini API configuration state (`gemini
 
 ---
 
-## 🚀 Quick Start Guide
+## ☁️ Cloud Deployment & Containerization
+
+### 1. Backend (Render / Docker)
+* **Render Blueprint**: Use the included `render.yaml` blueprint for automatic deployment on [Render](https://render.com).
+* **Docker Container**: Build and run containerized backend:
+  ```bash
+  docker build -t forma-ai-backend ./backend
+  docker run -p 5000:5000 forma-ai-backend
+  ```
+
+### 2. Frontend (Vercel / Docker)
+* **Vercel Deployment**: Configured with `frontend/vercel.json` for single-page client routing rewrites.
+* **Docker Container**: Multi-stage NGINX static web server build:
+  ```bash
+  docker build -t forma-ai-frontend ./frontend
+  docker run -p 80:80 forma-ai-frontend
+  ```
+
+---
+
+## 🚀 Local Quick Start Guide
 
 ### 1. Clone & Install Dependencies
 ```bash
@@ -145,3 +147,4 @@ cd frontend && npm run dev
 ```
 
 Navigate to `http://localhost:5173` to view the running app!
+
