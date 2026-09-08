@@ -181,6 +181,20 @@ function App() {
   // Gemini health status
   const [geminiActive, setGeminiActive] = useState(false);
 
+  // Theme state (Dark / Light)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('forma_theme') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('forma_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   useEffect(() => {
     const checkGeminiStatus = async () => {
       try {
@@ -429,6 +443,27 @@ function App() {
             }}
           >
             {view === 'history' ? '⚡ Active Simulator' : '📓 Extraction History'}
+          </button>
+
+          <button
+            onClick={toggleTheme}
+            className="btn"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              padding: '0.4rem 0.85rem',
+              fontSize: '0.85rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              transition: 'all 0.2s ease'
+            }}
+            title="Toggle Light / Dark Mode"
+          >
+            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
           </button>
 
           <div className="tech-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
