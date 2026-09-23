@@ -206,30 +206,52 @@ export default function LandingPage({ onLaunchSimulator }: LandingPageProps) {
                 <span className="dot dot-yellow"></span>
                 <span className="dot dot-green"></span>
               </div>
-              <div className="visual-title-badge">forma-engine-core.json</div>
+              <div className="visual-title-badge">Forma AI Extraction Pipeline</div>
+              <div className="visual-live-tag">
+                <span className="pulse-indicator-circle"></span>
+                <span>LIVE</span>
+              </div>
             </div>
 
-            <div className="visual-code-grid">
-              <div className="code-block-header">AI Extraction Rules Configuration</div>
-              <pre className="code-display">
-                <code>
-{`{
-  "engine": "FormaAI-v1.0",
-  "rules": [
-    {
-      "trigger": "narrative_contains('radiator leaking')",
-      "action": "reveal_field('car_drivable', 'boolean')",
-      "required": true
-    },
-    {
-      "trigger": "severity === 'High'",
-      "action": "inject_notice('Immediate inspection required')",
-      "priority": 1
-    }
-  ]
-}`}
-                </code>
-              </pre>
+            {/* Visual Transformation Card */}
+            <div className="hero-transformation-preview">
+              <div className="preview-narrative-box">
+                <div className="preview-box-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                  </svg>
+                  <span>Unstructured Narrative Input</span>
+                </div>
+                <p className="preview-narrative-text">
+                  "My car radiator started leaking on the highway after a collision with a guardrail..."
+                </p>
+              </div>
+
+              <div className="preview-arrow-divider">
+                <div className="arrow-line"></div>
+                <div className="ai-chip-badge">
+                  <span className="sparkle">⚡</span> Gemini 1.5 AI Pipeline
+                </div>
+                <div className="arrow-line"></div>
+              </div>
+
+              <div className="preview-extracted-grid">
+                <div className="preview-extracted-card">
+                  <span className="extracted-key">Category</span>
+                  <span className="extracted-val category-badge">🚗 Auto Accident</span>
+                </div>
+                <div className="preview-extracted-card">
+                  <span className="extracted-key">Urgency</span>
+                  <span className="extracted-val urgency-badge-high font-bold">🔥 High (0.94)</span>
+                </div>
+                <div className="preview-extracted-card full-width">
+                  <span className="extracted-key">Dynamic Branch Activated</span>
+                  <div className="preview-branch-box">
+                    <span className="branch-label font-medium">Is vehicle drivable?</span>
+                    <span className="branch-pill">Yes / No Toggle</span>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="visual-floating-badge-1 glass-card">
